@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hochzeitsquiz</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom right, #fff8f0, #fceecf);
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #b68d40;
+      text-align: center;
+      font-size: 2em;
+      margin-bottom: 20px;
+    }
+
+    .heart {
+      font-size: 2rem;
+      color: #e63946;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.7; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      padding: 30px;
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+    }
+
+    input, button {
+      font-size: 1rem;
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      margin: 10px 0;
+    }
+
+    button {
+      background: #f0c15e;
+      color: black;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #ddb347;
+    }
+
+    .question {
+      margin: 20px 0;
+      font-weight: bold;
+    }
+
+    .answers {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .result {
+      margin-top: 20px;
+      font-size: 1.2em;
+      color: #b68d40;
+    }
+
+    @media (max-width: 600px) {
+      .card {
+        padding: 20px;
+      }
+    }
+
+    #ranking-admin {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>💍 Hochzeits-Quiz <span class="heart">❤️</span></h1>
+  <div class="card">
+
+    <div id="start-screen">
+      <p>Wie heißt du?</p>
+      <input type="text" id="player-name" placeholder="Dein Name"/>
+      <button onclick="startGame()">Start</button>
+      <button onclick="enterPin()">Admin (PIN)</button>
+    </div>
+
+    <div id="quiz" class="hidden">
+      <div id="question-number"></div>
+      <div class="question" id="question-text"></div>
+      <div class="answers" id="answers"></div>
+    </div>
+
+    <div id="end-screen" class="hidden">
+      <h2>Quiz beendet 🎉</h2>
+      <p class="result" id="final-score"></p>
+      <h3>Ranking</h3>
+      <ul id="ranking-list"></ul>
+      <button onclick="restart()">Erneut spielen</button>
+    </div>
+
+    <div id="ranking-admin" class="hidden">
+      <h3>Bestehendes Ranking</h3>
+      <ul id="admin-ranking-list"></ul>
+      <button onclick="clearRanking()">Ranking zurücksetzen</button>
+      <button onclick="closeAdmin()">Schließen</button>
+    </div>
+
+  </div>
+
+  <script>
+    const PIN = "1412";
+
+    const questions = [
+      {
+        question: "Wo hat das Brautpaar sich verlobt?",
+        answers: ["in Prag", "im Restaurant", "am Strand", "zuhause"],
+        correct: 2
+      },
+      {
+        question: "Wie heißt der Kater des Brautpaares?",
+        answers: ["Murmel", "Bommel", "Morle", "Mufasa"],
+        correct: 0
+      },
+      {
+        question: "War einer von beiden beim ersten „sehen“ betrunken?",
+        answers: ["Er", "Sie", "Keiner", "Beide"],
+        correct: 1
+      },
+      {
+        question: "Wer hat den „ersten Schritt“ gemacht?",
+        answers: ["Er", "Sie", "eine Freundin", "Trauzeuge"],
+        correct: 2
+      },
+      {
+        question: "Wer hat den Antrag gemacht?",
+        answers: ["Er", "Sie", "Beide", "Ein Glückskeks"],
+        correct: 0
+      },
+      {
+        question: "Was ist das Lieblingsessen der Braut?",
+        answers: ["Spinat", "Carbonara", "Königsberger Klopse", "Pizza"],
+        correct: 0
+      },
+      {
+        question: "Wohin geht es in die Flitterwochen?",
+        answers: ["Mallorca", "Heraklion", "Kroatien", "Malediven"],
+        correct: 1
+      },
+      {
+        question: "Wie lange ist das Brautpaar schon ein Paar?",
+        answers: ["2 Jahre", "4 Jahre", "6 Jahre", "8 Jahre"],
+        correct: 1
+      }
+    ];
+
+    let currentQuestion = 0;
+    let score = 0;
+    let playerName = "";
+
+    const startScreen = document.getElementById("start-screen");
+    const quiz = document.getElementById("quiz");
+    const endScreen = document.getElementById("end-screen");
+    const questionText = document.getElementById("question-text");
+    const questionNumber = document.getElementById("question-number");
+    const answersDiv = document.getElementById("answers");
+    const finalScore = document.getElementById("final-score");
+    const rankingList = document.getElementById("ranking-list");
+    const adminRankingList = document.getElementById("admin-ranking-list");
+    const rankingAdmin = document.getElementById("ranking-admin");
+
+    function startGame() {
+      playerName = document.getElementById("player-name").value.trim();
+      if (!playerName) return alert("Bitte gib deinen Namen ein.");
+      startScreen.classList.add("hidden");
+      quiz.classList.remove("hidden");
+      showQuestion();
+    }
+
+    function showQuestion() {
+      const current = questions[currentQuestion];
+      questionNumber.textContent = `Frage ${currentQuestion + 1} von ${questions.length}`;
+      questionText.textContent = current.question;
+      answersDiv.innerHTML = "";
+      current.answers.forEach((ans, idx) => {
+        const btn = document.createElement("button");
+        btn.textContent = ans;
+        btn.onclick = () => answerQuestion(idx);
+        answersDiv.appendChild(btn);
+      });
+    }
+
+    function answerQuestion(choice) {
+      if (choice === questions[currentQuestion].correct) {
+        score++;
+      }
+      currentQuestion++;
+      if (currentQuestion < questions.length) {
+        showQuestion();
+      } else {
+        endGame();
+      }
+    }
+
+    function endGame() {
+      quiz.classList.add("hidden");
+      endScreen.classList.remove("hidden");
+      finalScore.textContent = `${playerName}, du hast ${score} von ${questions.length} Punkten!`;
+
+      let ranking = JSON.parse(localStorage.getItem("ranking") || "[]");
+      ranking.push({ name: playerName, score });
+      ranking.sort((a, b) => b.score - a.score);
+      localStorage.setItem("ranking", JSON.stringify(ranking));
+
+      rankingList.innerHTML = "";
+      ranking.forEach((entry, i) => {
+        const li = document.createElement("li");
+        li.textContent = `${i + 1}. ${entry.name}: ${entry.score} Punkte`;
+        rankingList.appendChild(li);
+      });
+    }
+
+    function restart() {
+      currentQuestion = 0;
+      score = 0;
+      playerName = "";
+      document.getElementById("player-name").value = "";
+      endScreen.classList.add("hidden");
+      startScreen.classList.remove("hidden");
+    }
+
+    function enterPin() {
+      const userPin = prompt("PIN eingeben:");
+      if (userPin === PIN) {
+        showAdminRanking();
+      } else {
+        alert("Falscher PIN.");
+      }
+    }
+
+    function showAdminRanking() {
+      startScreen.classList.add("hidden");
+      quiz.classList.add("hidden");
+      endScreen.classList.add("hidden");
+      rankingAdmin.classList.remove("hidden");
+
+      const ranking = JSON.parse(localStorage.getItem("ranking") || "[]");
+      adminRankingList.innerHTML = "";
+      if (ranking.length === 0) {
+        adminRankingList.innerHTML = "<li>Keine Einträge</li>";
+      } else {
+        ranking.forEach((entry, i) => {
+          const li = document.createElement("li");
+          li.textContent = `${i + 1}. ${entry.name}: ${entry.score} Punkte`;
+          adminRankingList.appendChild(li);
+        });
+      }
+    }
+
+    function clearRanking() {
+      if (confirm("Möchtest du das Ranking wirklich löschen?")) {
+        localStorage.removeItem("ranking");
+        adminRankingList.innerHTML = "<li>Keine Einträge</li>";
+        alert("Ranking wurde zurückgesetzt.");
+      }
+    }
+
+    function closeAdmin() {
+      rankingAdmin.classList.add("hidden");
+      startScreen.classList.remove("hidden");
+    }
+  </script>
+</body>
+</html>
